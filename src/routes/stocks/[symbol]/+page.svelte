@@ -2,6 +2,7 @@
 import { page } from '$app/stores';
 import { stocks } from '$lib/stores/market.svelte';
 import StockChart from '$lib/components/StockChart.svelte';
+let { data } = $props();
 let sym=$derived($page.params.symbol??'');
 let stock=$state<any>(null);
 stocks.subscribe(m=>{ stock=sym ? m[sym] : null; });
@@ -16,6 +17,7 @@ let cashV=$state(100000);
 cash.subscribe(v=>cashV=v);
 let msg=$state('');
 function doTrade(){
+  if(!data.user){ msg='Please sign in to trade'; return; }
   if(!sym || !stock) return;
   try{
     if(tab==='BUY') buy(sym,Number(qty),stock.price);
@@ -32,7 +34,11 @@ function doTrade(){
     <div style="width:44px;height:44px;background:#1f2937;border-radius:10px;display:grid;place-items:center;font-weight:800">{sym[0]}</div>
     <div><div style="font-weight:800;font-size:18px">{stock.name} <span style="color:#9ca3af;font-weight:600">{sym}</span> <span style="font-size:12px;color:#6b7280">{stock.sector}</span></div>
     <div style="font-size:28px;font-weight:800">${stock.price.toFixed(2)} <span class={stock.change>=0?'up':'down'} style="font-size:16px">{stock.change>=0?'↑':'↓'} {stock.change.toFixed(2)} ({stock.changePercent.toFixed(2)}%)</span></div></div>
-    <button class="btn primary" style="margin-left:auto" onclick={()=>showModal=true}>Buy / Sell (Demo)</button>
+    {#if data.user}
+      <button class="btn primary" style="margin-left:auto" onclick={()=>showModal=true}>Buy / Sell (Demo)</button>
+    {:else}
+      <a href="/login" class="btn primary" style="margin-left:auto;text-decoration:none">Sign In to Trade</a>
+    {/if}
   </div>
   <div class="grid3" style="margin-top:12px">
     <div class="card"><div style="color:#9ca3af;font-size:12px">Open</div><b>{stock.open.toFixed(2)}</b></div>

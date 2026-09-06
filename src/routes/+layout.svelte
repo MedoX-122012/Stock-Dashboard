@@ -3,7 +3,8 @@ import { onMount } from 'svelte';
 import { connect, disconnect } from '$lib/services/sse';
 import { connectionStatus, lastUpdate, updateCount, marketTime, stocks } from '$lib/stores/market.svelte';
 import { page } from '$app/stores';
-let {children}= $props();
+import { enhance } from '$app/forms';
+let {children, data}= $props();
 let query=$state('');
 let results=$state<any[]>([]);
 let status=$state('DISCONNECTED');
@@ -13,6 +14,8 @@ let mtime=$state(new Date());
 let qDeb:any;
 let sidebarOpen=$state(false);
 let searchInput: HTMLInputElement;
+let showUserMenu=$state(false);
+let user=$derived(data.user);
 connectionStatus.subscribe(v=>status=v);
 updateCount.subscribe(v=>upd=v);
 lastUpdate.subscribe(v=>last=v);
@@ -39,9 +42,10 @@ onMount(()=>{
   window.addEventListener('keydown', handleKeydown);
   return ()=>{disconnect(); window.removeEventListener('keydown', handleKeydown);};
 });
-let nav=[
-  ['/','Overview'],['/markets','Markets'],['/compare','Compare'],['/watchlist','Watchlist'],['/portfolio','Portfolio'],['/news','News'],['/alerts','Alerts'],['/settings','Settings']
-];
+let nav=$derived(user
+  ? [['/','Overview'],['/markets','Markets'],['/compare','Compare'],['/watchlist','Watchlist'],['/portfolio','Portfolio'],['/news','News'],['/alerts','Alerts']]
+  : [['/','Overview'],['/markets','Markets'],['/compare','Compare'],['/news','News']]
+);
 </script>
 <svelte:head><title>MarketPulse — Demo Trading Terminal</title></svelte:head>
 <div class="app">
@@ -68,6 +72,29 @@ let nav=[
         {/if}
       </div>
       <div class="status">
+        {#if user}
+          <div class="user-menu-wrap">
+            <button class="user-avatar" onclick={()=>showUserMenu=!showUserMenu} style="background:{user.avatarColor}">
+              {user.displayName[0].toUpperCase()}
+            </button>
+            {#if showUserMenu}
+              <div class="user-menu">
+                <div class="user-info">
+                  <div class="user-name">{user.displayName}</div>
+                  <div class="user-email">{user.email}</div>
+                </div>
+                <div class="user-divider"></div>
+                <a href="/settings" onclick={()=>showUserMenu=false}>Settings</a>
+                <form method="POST" action="/logout" use:enhance>
+                  <button type="submit" class="logout-btn">Sign Out</button>
+                </form>
+              </div>
+            {/if}
+          </div>
+        {:else}
+          <a href="/login" class="auth-link">Sign In</a>
+          <a href="/signup" class="auth-link signup">Sign Up</a>
+        {/if}
         <span class="dot" class:live={status==='CONNECTED'} class:recon={status==='RECONNECTING'}></span>
         <span class="conn">{status==='CONNECTED'?'Live':status==='RECONNECTING'?'Reconnecting…':status}</span>
         <span class="hide-m">{new Date(last).toLocaleTimeString()} • {upd.toLocaleString()} updates</span>
@@ -108,6 +135,21 @@ nav a.active,nav a:hover{background:#111827;color:#fff;border-color:#1f2937}
 .content{padding:16px;flex:1}
 .foot{padding:8px 16px;border-top:1px solid #1f2937;background:#0b0f1c;color:#6b7280;font-size:11px}
 .hamburger{display:none;background:transparent;color:#e5e7eb;border:1px solid #1f2937;border-radius:8px;padding:6px 10px}
+.user-menu-wrap{position:relative}
+.user-avatar{width:32px;height:32px;border-radius:50%;border:2px solid #1f2937;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#fff;cursor:pointer;transition:border-color .15s}
+.user-avatar:hover{border-color:#22c55e}
+.user-menu{position:absolute;top:40px;right:0;background:#111827;border:1px solid #1f2937;border-radius:10px;min-width:200px;z-index:30;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.4)}
+.user-info{padding:12px 14px}
+.user-name{font-weight:700;font-size:14px}
+.user-email{color:#6b7280;font-size:12px;margin-top:2px}
+.user-divider{border-top:1px solid #1f2937}
+.user-menu a,.logout-btn{display:block;width:100%;text-align:left;padding:10px 14px;color:#e5e7eb;text-decoration:none;font-size:13px;background:none;border:none;cursor:pointer;font-family:inherit}
+.user-menu a:hover,.logout-btn:hover{background:#1f2937}
+.logout-btn{color:#ef4444}
+.auth-link{color:#9ca3af;text-decoration:none;padding:6px 10px;border-radius:8px;font-size:13px;border:1px solid #1f2937;transition:all .15s}
+.auth-link:hover{background:#111827;color:#fff;border-color:#374151}
+.auth-link.signup{background:#22c55e;color:#052e16;border-color:#16a34a;font-weight:600}
+.auth-link.signup:hover{background:#16a34a}
 @media(max-width:900px){
   .sidebar{position:fixed;left:-100%;z-index:30;transition:.2s}
   .sidebar.open{left:0}

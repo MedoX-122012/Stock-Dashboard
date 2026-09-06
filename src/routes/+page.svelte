@@ -1,7 +1,12 @@
 <script lang="ts">
+import { onMount } from 'svelte';
 import { stocks, indices, flashMap } from '$lib/stores/market.svelte';
+import { initPortfolio } from '$lib/stores/portfolio.svelte';
+import { initWatchlists } from '$lib/stores/watchlist.svelte';
+import { initAlerts } from '$lib/stores/alerts.svelte';
 import Sparkline from '$lib/components/Sparkline.svelte';
 import StockChart from '$lib/components/StockChart.svelte';
+let { data } = $props();
 let idx=$state<any[]>([]);
 let list=$state<any[]>([]);
 let flash=$state<Record<string,any>>({});
@@ -12,6 +17,11 @@ let showVol=$state(true);
 indices.subscribe(v=>idx=v);
 stocks.subscribe(v=>list=Object.values(v));
 flashMap.subscribe(v=>flash=v);
+onMount(()=>{
+  if(data.user && data.portfolio) initPortfolio(data.portfolio, data.user.id);
+  if(data.user && data.watchlists) initWatchlists(data.watchlists, data.user.id);
+  if(data.user && data.alerts) initAlerts(data.alerts, data.user.id);
+});
 let movers=$derived([...list].sort((a,b)=>b.changePercent-a.changePercent));
 let gainers=$derived(movers.slice(0,5));
 let losers=$derived([...movers].reverse().slice(0,5));
